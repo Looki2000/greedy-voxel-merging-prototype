@@ -66,6 +66,8 @@ except ValueError:
 material_cols = tuple(tuple(val for val in colorsys.hsv_to_rgb(h/360, 0.5, 1)) for h in range(0, 360, 36))
 
 
+################# greedy merging function is here ! #######################
+# \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ #
 
 def greedy_voxel_merging():
     map_copy = map.copy()
