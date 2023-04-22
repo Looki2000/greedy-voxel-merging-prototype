@@ -54,6 +54,7 @@ print(
     1 - change voxels
     2 - render only voxels (very laggy because of matplotlib)
     3 - greedy voxel merging, rendering only cuboids (verry buggy because of matplotlib)
+    4 - greedy mesh and save as greedy_meshed.obj
 """)
 
 try:
@@ -165,6 +166,150 @@ def greedy_voxel_merging():
 
                 last_material = map_copy[z][y][x]
 
+# indices for 2 triangles per each face
+faces_indices = (
+    (0, 1, 3, 0, 3, 2), # bottom
+    (0, 2, 6, 0, 6, 4), # left
+    (0, 4, 5, 0, 5, 1), # back
+    (4, 7, 5, 4, 6, 7), # top
+    (1, 5, 7, 1, 7, 3), # right
+    (2, 7, 6, 2, 3, 7), # front
+)
+
+# indices for cuboid axis values for voxel slice for checking if face is covered with voxels and can be ignored
+slice_axises_indices = (
+    # (2) axis A, (2) axis B, (2) axis C where 1st is negative side, 2nd is positive side (for example bottom is negative)
+    (0, 3, 2, 5, 1, 4), # bottom/top face check
+    (1, 4, 2, 5, 0, 3), # left/right face check
+    (0, 3, 1, 4, 2, 5)  # back/front face check
+)
+
+
+def greedy_mesh(map, cuboids):
+    vertices = []
+    vertices_indices = []
+    
+    for cuboid in cuboids:
+        
+        # calculate vertices
+
+        # x1 = 0
+        # y1 = 1
+        # z1 = 2
+        # x2 = 3
+        # y2 = 4
+        # z2 = 5
+        # ========
+        # x1 y1 z1
+        # x2 y1 z1
+        # x1 y1 z2
+        # x2 y1 z2
+        # x1 y2 z1
+        # x2 y2 z1
+        # x1 y2 z2
+        # x2 y2 z2
+
+        # positions of every vertex of the cuboid (each corner)
+        cuboid_vertices = (
+            (cuboid[0], cuboid[1], cuboid[2]),
+            (cuboid[3], cuboid[1], cuboid[2]),
+            (cuboid[0], cuboid[1], cuboid[5]),
+            (cuboid[3], cuboid[1], cuboid[5]),
+            (cuboid[0], cuboid[4], cuboid[2]),
+            (cuboid[3], cuboid[4], cuboid[2]),
+            (cuboid[0], cuboid[4], cuboid[5]),
+            (cuboid[3], cuboid[4], cuboid[5])
+        )
+
+        cuboid_vertices_indices = []
+
+        # iterate over cuboid vertices
+        for vertex in cuboid_vertices:
+            # check if vertex is already in vertices list, if so, add its index to cuboid_vertices_indices
+            try:
+                cuboid_vertices_indices.append(vertices.index(vertex))
+            
+            # if not, add it to the list, and add its index to cuboid_vertices_indices
+            except ValueError:
+                cuboid_vertices_indices.append(len(vertices))
+                vertices.append(vertex)
+        
+        # calculate faces
+
+        for face_idx, face_indices in enumerate(faces_indices):
+            # do not add faces that are not visible. check what sides of cuboid are occupied by voxels completely
+            # if a side is not occupied, add the corresponding faces to the mesh
+
+            face_sign, face_axis_idx = divmod(face_idx, 3)
+            # face_sign: 0 - negative, 1 - positive
+
+            slice_axis_C = cuboid[slice_axises_indices[face_axis_idx][4 + face_sign]] - (1 - face_sign)
+
+
+            # if face is touching chunk boarder, ignore it
+            if slice_axis_C == -1 or slice_axis_C == voxel_count:
+                continue
+
+
+            # start and end of axises for scan of slice of voxels next to the face
+            slice_axis_A_start = cuboid[slice_axises_indices[face_axis_idx][0]]
+            slice_axis_A_end = cuboid[slice_axises_indices[face_axis_idx][1]]
+            slice_axis_B_start = cuboid[slice_axises_indices[face_axis_idx][2]]
+            slice_axis_B_end = cuboid[slice_axises_indices[face_axis_idx][3]]
+
+
+            # check if face is covered with voxels
+            stop_checking = False
+
+            # bottom/top face check (y axis)
+            if face_axis_idx == 0:
+                for z in range(slice_axis_B_start, slice_axis_B_end):
+                    for x in range(slice_axis_A_start, slice_axis_A_end):
+
+                        if map[z][slice_axis_C][x] == 0: # if air, face is not fully covered, stop checking
+                            stop_checking = True
+                            break
+
+                    if stop_checking:
+                        break
+
+
+            # left/right face check (x axis)
+            elif face_axis_idx == 1:
+                for z in range(slice_axis_B_start, slice_axis_B_end):
+                    for y in range(slice_axis_A_start, slice_axis_A_end):
+
+                        if map[z][y][slice_axis_C] == 0:
+                            stop_checking = True
+                            break
+
+                    if stop_checking:
+                        break
+
+
+            # back/front face check (z axis)
+            elif face_axis_idx == 2:
+                for y in range(slice_axis_B_start, slice_axis_B_end):
+                    for x in range(slice_axis_A_start, slice_axis_A_end):
+
+                        if map[slice_axis_C][y][x] == 0:
+                            stop_checking = True
+                            break
+
+                    if stop_checking:
+                        break
+
+
+            if not stop_checking:
+                continue
+
+
+            vertices_indices.extend((
+                (cuboid_vertices_indices[face_indices[0]], cuboid_vertices_indices[face_indices[1]], cuboid_vertices_indices[face_indices[2]]),
+                (cuboid_vertices_indices[face_indices[3]], cuboid_vertices_indices[face_indices[4]], cuboid_vertices_indices[face_indices[5]])
+            ))
+
+    return vertices, vertices_indices
 
 
 if mode == 1: # place/remove voxels
@@ -329,3 +474,19 @@ elif mode == 3: # greedy voxel merging, rendering only cuboids
     
 
     plt.show()
+    
+elif mode == 4: # greedy merge -> greedy mesh and save as obj
+    
+    greedy_voxel_merging()
+
+    vertices, vertices_indices = greedy_mesh(map, cuboids)
+
+    # save vertices and vertex indices to obj file
+    with open("greedy_meshed.obj", "w") as f:
+        for vertex in vertices:
+            f.write(f"v {vertex[0]} {vertex[1]} {vertex[2]}\n")
+
+        for vertex_index in vertices_indices:
+            f.write(f"f {vertex_index[0]+1} {vertex_index[1]+1} {vertex_index[2]+1}\n")
+
+    print("map saved as greedy_meshed.obj")
