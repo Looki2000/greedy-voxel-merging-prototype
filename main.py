@@ -247,61 +247,63 @@ def greedy_mesh(map, cuboids):
 
 
             # if face is touching chunk boarder, ignore it
-            if slice_axis_C == -1 or slice_axis_C == voxel_count:
-                continue
+            #if slice_axis_C == -1 or slice_axis_C == voxel_count:
+            #    continue
+
+            # if face is NOT touching chunk boarder, continue with checking
+            if slice_axis_C != -1 and slice_axis_C != voxel_count:
+
+                # start and end of axises for scan of slice of voxels next to the face
+                slice_axis_A_start = cuboid[slice_axises_indices[face_axis_idx][0]]
+                slice_axis_A_end = cuboid[slice_axises_indices[face_axis_idx][1]]
+                slice_axis_B_start = cuboid[slice_axises_indices[face_axis_idx][2]]
+                slice_axis_B_end = cuboid[slice_axises_indices[face_axis_idx][3]]
 
 
-            # start and end of axises for scan of slice of voxels next to the face
-            slice_axis_A_start = cuboid[slice_axises_indices[face_axis_idx][0]]
-            slice_axis_A_end = cuboid[slice_axises_indices[face_axis_idx][1]]
-            slice_axis_B_start = cuboid[slice_axises_indices[face_axis_idx][2]]
-            slice_axis_B_end = cuboid[slice_axises_indices[face_axis_idx][3]]
+                # check if face is covered with voxels
+                stop_checking = False
 
+                # bottom/top face check (y axis)
+                if face_axis_idx == 0:
+                    for z in range(slice_axis_B_start, slice_axis_B_end):
+                        for x in range(slice_axis_A_start, slice_axis_A_end):
 
-            # check if face is covered with voxels
-            stop_checking = False
+                            if map[z][slice_axis_C][x] == 0: # if air, face is not fully covered, stop checking
+                                stop_checking = True
+                                break
 
-            # bottom/top face check (y axis)
-            if face_axis_idx == 0:
-                for z in range(slice_axis_B_start, slice_axis_B_end):
-                    for x in range(slice_axis_A_start, slice_axis_A_end):
-
-                        if map[z][slice_axis_C][x] == 0: # if air, face is not fully covered, stop checking
-                            stop_checking = True
+                        if stop_checking:
                             break
 
-                    if stop_checking:
-                        break
 
+                # left/right face check (x axis)
+                elif face_axis_idx == 1:
+                    for z in range(slice_axis_B_start, slice_axis_B_end):
+                        for y in range(slice_axis_A_start, slice_axis_A_end):
 
-            # left/right face check (x axis)
-            elif face_axis_idx == 1:
-                for z in range(slice_axis_B_start, slice_axis_B_end):
-                    for y in range(slice_axis_A_start, slice_axis_A_end):
+                            if map[z][y][slice_axis_C] == 0:
+                                stop_checking = True
+                                break
 
-                        if map[z][y][slice_axis_C] == 0:
-                            stop_checking = True
+                        if stop_checking:
                             break
 
-                    if stop_checking:
-                        break
 
+                # back/front face check (z axis)
+                elif face_axis_idx == 2:
+                    for y in range(slice_axis_B_start, slice_axis_B_end):
+                        for x in range(slice_axis_A_start, slice_axis_A_end):
 
-            # back/front face check (z axis)
-            elif face_axis_idx == 2:
-                for y in range(slice_axis_B_start, slice_axis_B_end):
-                    for x in range(slice_axis_A_start, slice_axis_A_end):
+                            if map[slice_axis_C][y][x] == 0:
+                                stop_checking = True
+                                break
 
-                        if map[slice_axis_C][y][x] == 0:
-                            stop_checking = True
+                        if stop_checking:
                             break
 
-                    if stop_checking:
-                        break
 
-
-            if not stop_checking:
-                continue
+                if not stop_checking:
+                    continue
 
 
             vertices_indices.extend((
