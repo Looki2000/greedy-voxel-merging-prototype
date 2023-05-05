@@ -6,4 +6,5 @@ This one is in 3D!
 Use keys 0-9 to select material (voxel type) and up/down arrows to change y slice of the map. Use mouse button to place/remove voxels. This applies only in the "change voxels" mode.
 
 ## Meshing
-Meshing generates a mesh without faces that are completely covered with voxels. For simplicity, faces that have at least one air voxel touching them are not removed.
+Meshing generates a mesh without faces that are completely covered with voxels. For simplicity, faces that have at least one air voxel touching them are not removed. 
+This makes it unsuitable for transparent voxels, but it generates a mesh with fewer polygons.
