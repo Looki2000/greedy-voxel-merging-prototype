@@ -240,10 +240,10 @@ def greedy_mesh(map, cuboids):
             # do not add faces that are not visible. check what sides of cuboid are occupied by voxels completely
             # if a side is not occupied, add the corresponding faces to the mesh
 
-            face_sign, face_axis_idx = divmod(face_idx, 3)
-            # face_sign: 0 - negative, 1 - positive
+            face_dir, face_axis_idx = divmod(face_idx, 3)
+            # face_dir: 0 - negative, 1 - positive
 
-            slice_axis_C = cuboid[slice_axises_indices[face_axis_idx][4 + face_sign]] - (1 - face_sign)
+            slice_axis_C = cuboid[slice_axises_indices[face_axis_idx][4 + face_dir]] - (1 - face_dir)
 
 
             # if face is touching chunk boarder, ignore it
